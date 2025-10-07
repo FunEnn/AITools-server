@@ -5,7 +5,7 @@ import {
 } from '@clerk/express';
 import smms from '../configs/sm_ms.js';
 import fs from 'fs';
-import * as pdf from 'pdf-parse';
+import { createRequire } from 'module';
 
 export const generateArticle = async (req, res) => {
     try {
@@ -229,7 +229,7 @@ export const removeImageBackground = async (req, res) => {
         // 调用 SiliconFlow API 进行背景移除
         const response = await axios.post('https://api.siliconflow.cn/v1/images/generations', {
             model: "Qwen/Qwen-Image-Edit-2509",
-            prompt: "remove background, transparent background",
+            prompt: "Create a clean image with transparent background, remove the background while keeping the main subject intact",
             image: base64Image,
             image_size: "1024x1024",
             num_inference_steps: 20,
@@ -264,9 +264,20 @@ export const removeImageBackground = async (req, res) => {
     } catch (error) {
         console.error('背景移除错误:', error);
 
+        // 处理内容过滤错误
+        let errorMessage = '背景移除服务暂时不可用，请稍后重试';
+        
+        if (error.response?.data?.message?.includes('prohibited or sensitive content')) {
+            errorMessage = '图片内容可能包含敏感信息，请尝试其他图片';
+        } else if (error.response?.data?.message?.includes('content')) {
+            errorMessage = '图片内容不符合处理要求，请尝试其他图片';
+        } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }
+
         res.status(500).json({
             success: false,
-            message: error.response?.data?.message || '背景移除服务暂时不可用，请稍后重试'
+            message: errorMessage
         });
     }
 };
@@ -307,7 +318,7 @@ export const removeImageObject = async (req, res) => {
         // 调用 SiliconFlow API 进行对象移除
         const response = await axios.post('https://api.siliconflow.cn/v1/images/generations', {
             model: "Qwen/Qwen-Image-Edit-2509",
-            prompt: `remove ${object} from the image, keep the background and other objects intact`,
+            prompt: `Edit the image to remove the specified object: ${object}. Keep all other elements and background unchanged`,
             image: base64Image,
             image_size: "1024x1024",
             num_inference_steps: 25,
@@ -344,9 +355,20 @@ export const removeImageObject = async (req, res) => {
     } catch (error) {
         console.error('对象移除错误:', error);
 
+        // 处理内容过滤错误
+        let errorMessage = '对象移除服务暂时不可用，请稍后重试';
+        
+        if (error.response?.data?.message?.includes('prohibited or sensitive content')) {
+            errorMessage = '图片内容可能包含敏感信息，请尝试其他图片';
+        } else if (error.response?.data?.message?.includes('content')) {
+            errorMessage = '图片内容不符合处理要求，请尝试其他图片';
+        } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }
+
         res.status(500).json({
             success: false,
-            message: error.response?.data?.message || '对象移除服务暂时不可用，请稍后重试'
+            message: errorMessage
         });
     }
 };
@@ -374,7 +396,9 @@ export const resumeReview = async (req, res) => {
 
         // 读取PDF文件内容
         const dataBuffer = req.file.buffer;
-        const pdfData = await pdf.default(dataBuffer);
+        const require = createRequire(import.meta.url);
+        const pdf = require('pdf-parse');
+        const pdfData = await pdf(dataBuffer);
 
         // 构建简历审查提示词
         const prompt = `请仔细审查以下简历，并提供建设性的反馈意见，包括：
