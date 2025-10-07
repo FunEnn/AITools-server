@@ -21,24 +21,41 @@ export const auth = async (req, res, next) => {
         }
 
         const { userId, has } = authResult;
+        
+        // 获取用户权限信息
         const hasPremiumPlan = await has({ plan: 'premium' });
         const user = await clerkClient.users.getUser(userId);
 
-        if (!hasPremiumPlan && user.privateMetadata.free_usage) {
-            req.free_usage = user.privateMetadata.free_usage;
-        } else {
-            await clerkClient.users.updateUserMetadata(userId, {
-                privateMetadata: {
-                    free_usage: 0
-                }
-            });
-            req.free_usage = 0;
+        let freeUsage = 0;
+        if (!hasPremiumPlan && user.privateMetadata?.free_usage) {
+            freeUsage = user.privateMetadata.free_usage;
+        } else if (!hasPremiumPlan) {
+            // 初始化免费用户使用次数
+            try {
+                await clerkClient.users.updateUserMetadata(userId, {
+                    privateMetadata: {
+                        free_usage: 0
+                    }
+                });
+            } catch (error) {
+                console.warn('更新用户元数据失败，继续处理:', error.message);
+            }
         }
         
         req.plan = hasPremiumPlan ? 'premium' : 'free';
+        req.free_usage = freeUsage;
         next();
     } catch (error) {
         console.error('认证中间件错误:', error);
+        
+        // 处理特定的Clerk错误
+        if (error.status === 429) {
+            return res.status(429).json({ 
+                success: false, 
+                message: "请求过于频繁，请稍后重试" 
+            });
+        }
+        
         res.status(500).json({ 
             success: false, 
             message: error.message || "认证失败，请稍后重试" 
