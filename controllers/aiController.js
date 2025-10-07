@@ -5,7 +5,7 @@ import {
 } from '@clerk/express';
 import superbed from '../configs/superbed.js';
 import fs from 'fs';
-import pdf from 'pdf-parse';
+import * as pdf from 'pdf-parse';
 
 export const generateArticle = async (req, res) => {
     try {
@@ -40,7 +40,8 @@ export const generateArticle = async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 120000 // 2分钟超时
         });
 
         const content = response.data.choices[0].message.content;
@@ -385,7 +386,7 @@ export const resumeReview = async (req, res) => {
 
         // 读取PDF文件内容
         const dataBuffer = req.file.buffer;
-        const pdfData = await pdf(dataBuffer);
+        const pdfData = await pdf.default(dataBuffer);
 
         // 构建简历审查提示词
         const prompt = `请仔细审查以下简历，并提供建设性的反馈意见，包括：
