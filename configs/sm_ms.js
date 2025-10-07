@@ -20,6 +20,11 @@ class SMMSService {
                 filename = `upload-${Date.now()}.png`
             } = options;
 
+            // 检查token
+            if (!this.token) {
+                throw new Error('SM.MS Token 未配置，请设置 SM_MS_TOKEN 环境变量');
+            }
+
             const formData = new FormData();
             formData.append('smfile', imageBuffer, {
                 filename: filename,
