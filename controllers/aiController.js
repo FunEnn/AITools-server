@@ -3,7 +3,7 @@ import sql from '../configs/db.js';
 import {
     clerkClient
 } from '@clerk/express';
-import superbed from '../configs/superbed.js';
+import smms from '../configs/sm_ms.js';
 import fs from 'fs';
 import * as pdf from 'pdf-parse';
 
@@ -177,13 +177,9 @@ export const generateImage = async (req, res) => {
         });
         const imageBuffer = Buffer.from(downloadResponse.data);
 
-        // 使用封装的聚合图床服务上传图像
-        const uploadedImageUrl = await superbed.uploadImage(imageBuffer, {
-            filename: `ai-generated-${Date.now()}.png`,
-            categories: 'ai-generated',
-            watermark: false, // 关闭水印
-            compress: true, // 开启压缩
-            webp: false // 保持PNG格式
+        // 使用SM.MS图床服务上传图像
+        const uploadedImageUrl = await smms.uploadImage(imageBuffer, {
+            filename: `ai-generated-${Date.now()}.png`
         });
 
         // 保存到数据库
@@ -199,7 +195,7 @@ export const generateImage = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: errorMessage
+            message: error.response?.data?.message || 'AI 图像生成服务暂时不可用，请稍后重试'
         });
     }
 };
@@ -253,13 +249,9 @@ export const removeImageBackground = async (req, res) => {
         });
         const processedImageBuffer = Buffer.from(downloadResponse.data);
 
-        // 使用封装的聚合图床服务上传处理后的图像
-        const uploadedImageUrl = await superbed.uploadImage(processedImageBuffer, {
-            filename: `background-removed-${Date.now()}.png`,
-            categories: 'background-removed',
-            watermark: false, // 关闭水印
-            compress: true, // 开启压缩
-            webp: false // 保持PNG格式以支持透明背景
+        // 使用SM.MS图床服务上传处理后的图像
+        const uploadedImageUrl = await smms.uploadImage(processedImageBuffer, {
+            filename: `background-removed-${Date.now()}.png`
         });
 
         // 保存到数据库
@@ -335,13 +327,9 @@ export const removeImageObject = async (req, res) => {
         });
         const processedImageBuffer = Buffer.from(downloadResponse.data);
 
-        // 使用封装的聚合图床服务上传处理后的图像
-        const uploadedImageUrl = await superbed.uploadImage(processedImageBuffer, {
-            filename: `object-removed-${Date.now()}.png`,
-            categories: 'object-removed',
-            watermark: false, // 关闭水印
-            compress: true, // 开启压缩
-            webp: false // 保持PNG格式
+        // 使用SM.MS图床服务上传处理后的图像
+        const uploadedImageUrl = await smms.uploadImage(processedImageBuffer, {
+            filename: `object-removed-${Date.now()}.png`
         });
 
         // 保存到数据库
